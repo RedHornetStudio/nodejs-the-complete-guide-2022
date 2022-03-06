@@ -9,7 +9,8 @@ const requestHandler = (req, res) => {
     res.write('<head><title>My First Page</title></head>');
     res.write('<body><form action="/message" method="POST"><input type="text" name="message" /><input type="submit" /></form></body>');
     res.write('</html>');
-    return res.end();
+    res.end();
+    return;
   }
   if (url === '/message' && method === 'POST') {
     const body = [];
