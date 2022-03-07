@@ -1,11 +1,22 @@
-const http = require('http');
-const routes = require('./routes');
+const express = require('express');
+const bodyParser = require('body-parser');
 
-const hostname = '127.0.0.1';
+const app = express();
+
 const port = 3000;
 
-const server = http.createServer(routes.handler);
+const adminRoutes = require('./routes/admin');
+const shopRoutes = require('./routes/shop');
 
-server.listen(port, hostname, () => {
-  console.log(`Server running at http://${hostname}:${port}/`);
+app.use(bodyParser.urlencoded({ extended: false }));
+
+app.use('/admin', adminRoutes);
+app.use(shopRoutes);
+
+app.use('/', (req, res, next) => {
+  res.status(404).send('<h1>404 Page not found</h1>');
 });
+
+app.listen(port, () => {
+  console.log(`Example app listening on port ${port}`)
+})
