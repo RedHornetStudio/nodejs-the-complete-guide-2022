@@ -5,9 +5,13 @@ exports.getAddProduct = (req, res, next) => {
 };
 
 exports.postAddProduct = (req, res, next) => {
-  new Product(null, req.body.title, req.body.imageUrl, req.body.price, req.body.description).save(() => {
-    res.redirect('/');
-  });
+  new Product(null, req.body.title, req.body.imageUrl, req.body.price, req.body.description).save()
+    .then(() => {
+        res.redirect('/');
+    })
+    .catch(error => {
+      console.log(error);
+    });
 };
 
 exports.getAdminProducts = (req, res, next) => {
