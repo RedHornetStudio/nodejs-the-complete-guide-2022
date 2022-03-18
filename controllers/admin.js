@@ -5,7 +5,7 @@ exports.getAddProduct = (req, res, next) => {
 };
 
 exports.postAddProduct = (req, res, next) => {
-  new Product(null, req.body.title, req.body.imageUrl, req.body.price, req.body.description).save()
+  new Product(null, req.body.title, req.body.imageUrl, req.body.price, req.body.description, 1 /* id of logged user */).save()
     .then(() => {
         res.redirect('/');
     })
@@ -15,8 +15,8 @@ exports.postAddProduct = (req, res, next) => {
 };
 
 exports.getAdminProducts = (req, res, next) => {
-  Product.fetchAll()
-    .then(([rows, fieldData]) => {
+  Product.fetchAdminProducst(1 /* id of logged user */)
+    .then(([rows]) => {
       res.render('admin/products', { path: '/admin/products', pageTitle: 'Admin products', prods: rows });
     })
     .catch(error => {
@@ -25,9 +25,9 @@ exports.getAdminProducts = (req, res, next) => {
 };
 
 exports.getEditProduct = (req, res, next) => {
-  Product.findById(req.params.productId)
+  Product.findByIdAdminProduct(req.params.productId, 1 /* id of logged user */)
     .then(([rows]) => {
-      if (!rows.length === 0) {
+      if (rows.length === 0) {
         return res.redirect('/');
       }
       res.render('admin/edit-product', { path: 'admin/edit-product', pageTitle: 'Edit product', editing: true, product: rows[0] });

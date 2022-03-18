@@ -1,71 +1,31 @@
-const fs = require('fs');
-const path = require('path');
-
-const p = path.join(
-  path.dirname(process.mainModule.filename),
-  'data',
-  'cart.json'
-);
+const db = require('../util/database');
 
 module.exports = class Cart {
-  static addProduct(id, productPrice, callback) {
-    // Fetch the previous cart
-    fs.readFile(p, (err, fileContent) => {
-      let cart = { products: [], totalPrice: 0 };
-      if (!err) {
-        cart = JSON.parse(fileContent);
-      }
-      // Analyze the cart => Find existing product
-      const existingProductIndex = cart.products.findIndex(
-        prod => prod.id === id
-      );
-      const existingProduct = cart.products[existingProductIndex];
-      let updatedProduct;
-      // Add new product/ increase quantity
-      if (existingProduct) {
-        updatedProduct = { ...existingProduct };
-        updatedProduct.qty = updatedProduct.qty + 1;
-        cart.products[existingProductIndex] = updatedProduct;
-      } else {
-        updatedProduct = { id: id, qty: 1 };
-        cart.products = [...cart.products, updatedProduct];
-      }
-      cart.totalPrice = cart.totalPrice + +productPrice;
-      fs.writeFile(p, JSON.stringify(cart), err => {
-        if (err) console.log(err);
-        callback();
-      });
-    });
+  static async addProductAsync(productId, userId) {
+    const [carts] = await db.execute('SELECT * FROM carts WHERE userId = ?', [userId]);
+    const [existingProducts] = await db.execute('SELECT * FROM cartitems WHERE productId = ? AND cartId = ?', [productId, carts[0].id]);
+    if (existingProducts.length > 0) {
+      await db.execute('UPDATE cartitems SET quantity = ? WHERE id = ?', [existingProducts[0].quantity + 1, existingProducts[0].id]);
+    } else {
+      await db.execute('INSERT INTO cartitems (cartId, productId, quantity) VALUES (?, ?, ?)', [carts[0].id, productId, 1]);
+    }
   }
 
-  static deleteProduct(id, productPrice, callback) {
-    fs.readFile(p, (err, fileContent) => {
-      if (err) {
-        callback();
-        return;
-      }
-      const updatedCart = {...JSON.parse(fileContent)}
-      const product = updatedCart.products.find(product => product.id === id);
-      if (!product) {
-        callback();
-        return;
-      }
-      updatedCart.products = updatedCart.products.filter(product => product.id !== id);
-      updatedCart.totalPrice = updatedCart.totalPrice - productPrice * product.qty;
-      fs.writeFile(p, JSON.stringify(updatedCart), err => {
-        if (err) console.log(err);
-        callback();
-      });
-    });
+  static deleteProduct(productId) {
+    return db.execute('DELETE FROM cartitems WHERE productId = ?', [productId]);
   }
 
-  static getCart(callback) {
-    fs.readFile(p, (err, fileContent) => {
-      if (err) {
-        callback({ products: [], totalPrice:0 });
-        return;
-      }
-      callback(JSON.parse(fileContent));
-    });
+  static async getCartAsync(userId) {
+    const [carts] = await db.execute('SELECT * FROM carts WHERE userId = ?', [userId]);
+    if(carts.length !== 0) {
+      const [cartProducts] = await db.execute('SELECT products.id, products.title, products.price, products.imageUrl, products.description, products.userId, cartitems.quantity, cartitems.cartId, cartitems.productId FROM products INNER JOIN cartitems ON products.id = cartitems.productId AND cartitems.cartId = ?' , [carts[0].id]);
+      return cartProducts;
+    } else {
+      return [];
+    }
+  }
+
+  static deleteAllItems(userId) {
+    return db.execute('DELETE FROM carts WHERE userId = ?', [userId]);
   }
 };

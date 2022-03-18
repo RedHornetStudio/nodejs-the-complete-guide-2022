@@ -1,5 +1,7 @@
 const Product = require('../models/product');
 const Cart = require('../models/cart');
+const Order = require('../models/order');
+const db = require('../util/database');
 
 exports.getIndex = (req, res, next) => {
   Product.fetchAll()
@@ -32,32 +34,65 @@ exports.getProduct = (req, res, next) => {
 };
 
 exports.getCart = (req, res, next) => {
-  Cart.getCart(cart => {
-    Product.fetchAll(products => {
-      const cartProducts = [];
-      products.forEach(product => {
-        const carProductData = cart.products.find(cartProduct => cartProduct.id === product.id);
-        if (carProductData) cartProducts.push({ productData: product, qty: carProductData.qty });
-      });
-      res.render('shop/cart', { path: '/cart', pageTitle: 'Cart', products: cartProducts });
+  Cart.getCartAsync(1 /* id of logged user */)
+    .then(products => {
+      res.render('shop/cart', { path: '/cart', pageTitle: 'Cart', products: products });
+    })
+    .catch(error => {
+      console.log(error);
     });
-  });
 };
 
 exports.postCart = (req, res, next) => {
-  Product.findById(req.body.productId, product => {
-    Cart.addProduct(product.id, product.price, () => {
+  Product.findById(req.body.productId)
+    .then(([rows]) => {
+      return Cart.addProductAsync(rows[0].id, 1 /* id of logged user */);
+    })
+    .then(() => {
       res.redirect('/cart');
+    })
+    .catch(error => {
+      console.log(error);
     });
-  });
 };
 
 exports.postCartDeleteProduct = (req, res, next) => {
-Product.findById(req.body.productId, product => {
-  Cart.deleteProduct(req.body.productId, product.price, () => {
-    res.redirect('/cart');
-  });
-});
+  Product.findById(req.body.productId)
+    .then(([rows]) => {
+      return Cart.deleteProduct(rows[0].id);
+    })
+    .then(() => {
+      res.redirect('/cart');
+    })
+    .catch(error => {
+      console.log(error);
+    });
+};
+
+exports.getOrders = (req, res, next) => {
+  Order.getOrdersAsync(1 /* id of logged user */)
+  .then(orders => {
+    res.render('shop/orders', { path: '/orders', pageTitle: 'Your Orders', orders: orders});
+  })
+  .catch(error => {
+    console.log(error);
+  })
+};
+
+exports.postOrders = (req, res, next) => {
+  Cart.getCartAsync(1 /* id of logged user */)
+    .then(products => {
+      return Order.createOrderAsync(1 /* id of logged user */, products);
+    })
+    .then(() => {
+      return Cart.deleteAllItems(1 /* id of logged user */);
+    })
+    .then(() => {
+      res.redirect('/orders');
+    })
+    .catch(error => {
+      console.log(error);
+    });
 };
 
 exports.getCheckout = (req, res, next) => {
